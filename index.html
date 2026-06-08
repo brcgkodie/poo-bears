@@ -425,7 +425,6 @@
   <div class="tab" data-tab="kitchen"><svg viewBox="0 0 24 24"><path d="M4 11h16M6 11V8a6 6 0 0 1 12 0v3M9 11v10M15 11v10M7 21h10"/></svg><span>Kitchen</span></div>
 </div></nav>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
 <script>
 /* ---------------- LOGO ---------------- */
 const HEART=`<svg viewBox="0 0 24 24"><path d="M12 20.3s-7.4-4.5-9.8-9C.9 8.5 2.3 4.9 5.8 4.9c2 0 3.3 1.2 4.2 2.5.9-1.3 2.2-2.5 4.2-2.5 3.5 0 4.9 3.6 3.6 6.4-2.4 4.5-9.8 9-9.8 9Z"/></svg>`;
@@ -787,14 +786,15 @@ function openBuilder(edit){
 }
 function deleteCustom(id){state.custom=(state.custom||[]).filter(c=>c.id!==id);applyCustom();save();closeS();renderRecipes();}
 
-/* ---------------- CLOUD SYNC (Supabase) ---------------- */
+/* ---------------- CLOUD SYNC (Vercel Blob via /api/state) ---------------- */
+const API="/api/state";
 const BASE_R=R.length;
 function applyCustom(){R.length=BASE_R;for(const c of (state.custom||[]))R.push(c);}
 const CID=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():("c"+Date.now()+"."+Math.floor(Math.random()*1e6));
-function snapshot(){return {week:state.week,beef:state.beef,servings:state.servings,pantryOut:state.pantryOut,favs:state.favs,custom:state.custom,_cid:CID};}
-let sb=null,pushT=null;
-function queuePush(){if(!sb)return;clearTimeout(pushT);pushT=setTimeout(pushCloud,500);}
-async function pushCloud(){if(!sb)return;try{await sb.from("household").upsert({id:"poobears",data:snapshot(),updated_at:new Date().toISOString()});}catch(e){}}
+let pushT=null,lastTs=0,polling=null;
+function snapshot(){return {week:state.week,beef:state.beef,servings:state.servings,pantryOut:state.pantryOut,favs:state.favs,custom:state.custom,_cid:CID,_ts:Date.now()};}
+function queuePush(){if(window.__noSync)return;clearTimeout(pushT);pushT=setTimeout(pushCloud,600);}
+async function pushCloud(){try{const snap=snapshot();lastTs=snap._ts;await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(snap)});}catch(e){}}
 function applyRemote(d){
   if(!d)return;
   state.week=d.week||{};state.servings=d.servings||{};state.pantryOut=d.pantryOut||{};state.favs=d.favs||{};state.custom=d.custom||[];
@@ -803,15 +803,20 @@ function applyRemote(d){
   try{localStorage.setItem("poobears_v1",JSON.stringify(snapshot()))}catch(e){}
   renderRecipes();renderSauces();renderWeek();renderBeef();renderPantry();
 }
-async function initSync(){
-  if(window.__noSync||typeof supabase==="undefined")return;
-  try{
-    sb=supabase.createClient("https://dmybgybdacccbhxwsnzp.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRteWJneWJkYWNjY2JoeHdzbnpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MjE5NTIsImV4cCI6MjA5NjQ5Nzk1Mn0.eROLJI3RxQiGFqa8i_fQwt3XtoVtwj6n3sgoYXQ2E1E");
-    const {data}=await sb.from("household").select("data").eq("id","poobears").maybeSingle();
-    if(data&&data.data&&Object.keys(data.data).length&&data.data._cid!==CID){applyRemote(data.data);}
-    else{pushCloud();}
-    sb.channel("hh").on("postgres_changes",{event:"*",schema:"public",table:"household",filter:"id=eq.poobears"},p=>{const d=p.new&&p.new.data;if(d&&d._cid!==CID)applyRemote(d);}).subscribe();
+async function pull(){
+  try{const r=await fetch(API,{cache:"no-store"});if(!r.ok)return;const d=await r.json();
+    if(d&&Object.keys(d).length&&d._cid!==CID&&(d._ts||0)>lastTs){lastTs=d._ts||0;applyRemote(d);}
   }catch(e){}
+}
+async function initSync(){
+  if(window.__noSync)return;
+  try{const r=await fetch(API,{cache:"no-store"});const d=r.ok?await r.json():{};
+    if(d&&Object.keys(d).length){lastTs=d._ts||0;if(d._cid!==CID)applyRemote(d);}
+    else{pushCloud();}
+  }catch(e){pushCloud();}
+  if(!polling)polling=setInterval(()=>{if(!document.hidden)pull();},8000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull();});
+  window.addEventListener("focus",pull);
 }
 
 /* ---------------- INIT ---------------- */
