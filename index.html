@@ -94,6 +94,13 @@
 
   /* ---------- WEEK ---------- */
   .panel{background:var(--surface);border-radius:22px;box-shadow:var(--sh);padding:8px}
+  .weekbar{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:16px;box-shadow:var(--sh-sm);padding:7px;margin-bottom:10px}
+  .wkarrow{width:42px;height:42px;border-radius:12px;border:none;background:var(--surface2);font-size:22px;color:var(--ink);cursor:pointer;line-height:1;font-family:inherit}
+  .wkarrow:hover{background:var(--green-bg);color:var(--green-d)}
+  .wkmid{text-align:center;flex:1}
+  .wklabel{font-weight:800;font-size:16px}
+  .wkrange{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:1px}
+  .wktoday{text-align:center;font-size:13px;color:var(--green-d);font-weight:700;cursor:pointer;margin:-2px 0 10px}
   .empty{color:var(--muted);font-size:14px;text-align:center;padding:34px 18px;line-height:1.55;font-weight:500}
   .wrow{display:flex;align-items:center;gap:13px;padding:10px;border-radius:16px}
   .wrow+.wrow{border-top:1px solid var(--line)}
@@ -361,9 +368,15 @@
 
         <div class="week-grid">
           <div>
-            <div class="sec"><h2>The Plan</h2><span class="hint" id="planHint">tap a recipe to add</span></div>
-            <div class="panel"><div class="empty" id="weekEmpty">Nothing planned yet.<br>Even poo bears gotta eat before they shit — hit Recipes.</div><div id="weekList"></div></div>
-            <button class="btn" id="genBtn" style="display:none"><svg viewBox="0 0 24 24"><path d="M3 6h18M6 6V4h12v2M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>Build the grocery list</button>
+            <div class="sec"><h2>Meal Plan</h2><span class="hint">order Sun · Sun delivery</span></div>
+            <div class="weekbar">
+              <button class="wkarrow" id="wkPrev">‹</button>
+              <div class="wkmid"><div class="wklabel" id="wkLabel">This week</div><div class="wkrange" id="wkRange"></div></div>
+              <button class="wkarrow" id="wkNext">›</button>
+            </div>
+            <div class="wktoday" id="wkToday" style="display:none">↩ back to this week</div>
+            <div class="panel"><div class="empty" id="weekEmpty">Nothing planned for this week yet.<br>Hit Recipes and stack it up.</div><div id="weekList"></div></div>
+            <button class="btn" id="genBtn" style="display:none"><svg viewBox="0 0 24 24"><path d="M3 6h18M6 6V4h12v2M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg><span id="genLbl">Build the grocery list</span></button>
           </div>
           <div>
             <div class="sec"><h2>The Freezer</h2><span class="hint">Tiffin ¼ cow</span></div>
@@ -527,10 +540,22 @@ const S=[
 ];
 
 /* ---------------- STATE ---------------- */
-const state={week:{},beef:{},filter:"All",servings:{},pantryOut:{},favs:{},custom:[]};
+const state={weeks:{},viewWeek:null,beef:{},filter:"All",servings:{},pantryOut:{},favs:{},custom:[]};
+/* ----- week date helpers (Sunday-start weeks) ----- */
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtD(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function sundayOf(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-x.getDay());return x;}
+function parseWk(k){const a=k.split("-").map(Number);return new Date(a[0],a[1]-1,a[2]);}
+function curWeekKey(){return fmtD(sundayOf(new Date()));}
+function shiftWeek(k,n){const d=parseWk(k);d.setDate(d.getDate()+7*n);return fmtD(d);}
+function weekDiff(k){return Math.round((parseWk(k)-parseWk(curWeekKey()))/(7*864e5));}
+function weekRange(k){const a=parseWk(k),b=new Date(a);b.setDate(b.getDate()+6);return MON[a.getMonth()]+" "+a.getDate()+" – "+(a.getMonth()===b.getMonth()?b.getDate():MON[b.getMonth()]+" "+b.getDate());}
+function weekRel(k){const d=weekDiff(k);return d===0?"This week":d===1?"Next week":d===-1?"Last week":d>1?"In "+d+" weeks":(-d)+" weeks ago";}
+function weekShort(k){const d=weekDiff(k);return d===0?"this week":d===1?"next week":d===-1?"last week":"the week of "+MON[parseWk(k).getMonth()]+" "+parseWk(k).getDate();}
+function wkObj(){if(!state.viewWeek)state.viewWeek=curWeekKey();return state.weeks[state.viewWeek]||(state.weeks[state.viewWeek]={});}
 BEEF.forEach(c=>state.beef[c.k]=c.q);
 function save(){try{localStorage.setItem("poobears_v1",JSON.stringify(snapshot()))}catch(e){} if(typeof queuePush==="function")queuePush();}
-function load(){try{const d=JSON.parse(localStorage.getItem("poobears_v1")||"{}");if(d.week)state.week=d.week;if(d.servings)state.servings=d.servings;if(d.pantryOut)state.pantryOut=d.pantryOut;if(d.favs)state.favs=d.favs;if(d.custom)state.custom=d.custom;if(d.beef)Object.assign(state.beef,d.beef);}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem("poobears_v1")||"{}");if(d.weeks)state.weeks=d.weeks;else if(d.week)state.weeks={[curWeekKey()]:d.week};if(d.servings)state.servings=d.servings;if(d.pantryOut)state.pantryOut=d.pantryOut;if(d.favs)state.favs=d.favs;if(d.custom)state.custom=d.custom;if(d.beef)Object.assign(state.beef,d.beef);}catch(e){}}
 function toggleFav(id){if(state.favs[id])delete state.favs[id];else state.favs[id]=1;save();renderRecipes();}
 load();
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
@@ -598,12 +623,12 @@ function openR(id){
     ${r.kcal>0?`<div class="subt">Nutrition · per serving</div>
     <div class="nutri"><div class="n"><b>${r.kcal}</b><span>kcal</span></div><div class="n"><b>${r.pro}g</b><span>protein</span></div><div class="n"><b>${r.carb}g</b><span>carbs</span></div><div class="n"><b>${r.fat}g</b><span>fat</span></div></div>`:""}
     <div class="acts">
-      <button class="btn ${state.week[id]?'dark':''}" id="addWeek" style="flex:1.4">${state.week[id]?'✓ In this week':'Add to the week'}</button>
+      <button class="btn ${(state.weeks[state.viewWeek]||{})[id]?'dark':''}" id="addWeek" style="flex:1.4">${(state.weeks[state.viewWeek]||{})[id]?'✓ In '+weekShort(state.viewWeek)+' — remove':'Add to '+weekShort(state.viewWeek)}</button>
       <button class="btn ghost" id="printR" style="flex:1"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg>Save PDF</button>
     </div>
     ${r.custom?`<div class="acts"><button class="btn ghost" id="editR" style="flex:1">Edit recipe</button><button class="btn ghost" id="delR" style="flex:1;color:var(--berry)">Delete</button></div>`:""}`;
   $$("#sheetInner .scaler button").forEach(b=>b.onclick=()=>{const cur=state.servings[id]||r.base;state.servings[id]=Math.max(2,cur+(+b.dataset.d)*2);save();openR(id);});
-  $("#addWeek").onclick=()=>{state.week[id]?delete state.week[id]:state.week[id]=true;save();renderWeek();closeS();};
+  $("#addWeek").onclick=()=>{const w=wkObj();w[id]?delete w[id]:w[id]=true;if(!Object.keys(w).length)delete state.weeks[state.viewWeek];save();renderWeek();closeS();};
   $("#printR").onclick=()=>printR(id);
   const psEl=$("#sheetInner .pairsauce");if(psEl)psEl.onclick=()=>openSauce(psEl.dataset.sauce);
   if(r.custom){const er=$("#editR"),dr=$("#delR");if(er)er.onclick=()=>openBuilder(r);if(dr)dr.onclick=()=>{if(confirm("Delete this recipe?"))deleteCustom(id);};}
@@ -632,30 +657,40 @@ function printR(id){
 
 /* ---------------- WEEK ---------------- */
 function renderWeek(){
-  Object.keys(state.week).forEach(id=>{if(!R.find(x=>x.id===id))delete state.week[id];}); // drop stale ids
-  const ids=Object.keys(state.week),n=ids.length;
+  if(!state.viewWeek)state.viewWeek=curWeekKey();
+  const w=wkObj();
+  Object.keys(w).forEach(id=>{if(!R.find(x=>x.id===id))delete w[id];}); // drop stale ids
+  const ids=Object.keys(w),n=ids.length;
+  $("#wkLabel").textContent=weekRel(state.viewWeek);
+  $("#wkRange").textContent=weekRange(state.viewWeek);
+  $("#wkToday").style.display=state.viewWeek===curWeekKey()?"none":"block";
   [$("#weekBadge"),$("#sideBadge")].forEach(b=>{b.style.display=n?"flex":"none";b.textContent=n;});
   $("#weekEmpty").style.display=n?"none":"block";
   $("#genBtn").style.display=n?"flex":"none";
-  if(n){$("#greetH").textContent="Looking good, poo bears.";$("#greetP").textContent=`${n} ${n===1?'meal':'meals'} locked in · up next, ${R.find(x=>x.id===ids[0]).title}. Hope you stretched.`;}
+  $("#genLbl").textContent=`Build ${weekShort(state.viewWeek)}’s grocery list`;
+  if(n){$("#greetH").textContent="Looking good, poo bears.";$("#greetP").textContent=`${n} ${n===1?'meal':'meals'} set for ${weekShort(state.viewWeek)} · up next, ${R.find(x=>x.id===ids[0]).title}.`;}
   else{const q=QUIPS[Math.floor(Math.random()*QUIPS.length)];$("#greetH").textContent=q[0];$("#greetP").textContent=q[1];}
   $("#weekList").innerHTML=ids.map(id=>{const r=R.find(x=>x.id===id),sv=state.servings[id]||r.base;
     return `<div class="wrow"><div class="wthumb" data-id="${id}" style="cursor:pointer"></div><div class="t" data-id="${id}" style="cursor:pointer"><b>${r.title}</b><span>${sv} servings · ${r.app}</span></div><div class="rm" data-id="${id}">✕</div></div>`;}).join("");
   $$("#weekList .wthumb").forEach(el=>{setImg(el,R.find(x=>x.id===el.dataset.id));el.onclick=()=>openR(el.dataset.id);});
   $$("#weekList .t").forEach(el=>el.onclick=()=>openR(el.dataset.id));
-  $$("#weekList .rm").forEach(x=>x.onclick=()=>{delete state.week[x.dataset.id];save();renderWeek();});
+  $$("#weekList .rm").forEach(x=>x.onclick=()=>{delete w[x.dataset.id];if(!Object.keys(w).length)delete state.weeks[state.viewWeek];save();renderWeek();});
 }
 $("#genBtn").onclick=grocery;
+$("#wkPrev").onclick=()=>{state.viewWeek=shiftWeek(state.viewWeek,-1);renderWeek();};
+$("#wkNext").onclick=()=>{state.viewWeek=shiftWeek(state.viewWeek,1);renderWeek();};
+$("#wkToday").onclick=()=>{state.viewWeek=curWeekKey();renderWeek();};
 
 function grocery(){
+  const w=wkObj();
   const depts={},pantry=new Set();
-  Object.keys(state.week).forEach(id=>{const r=R.find(x=>x.id===id);if(!r)return;const k=(state.servings[id]||r.base)/r.base;
+  Object.keys(w).forEach(id=>{const r=R.find(x=>x.id===id);if(!r)return;const k=(state.servings[id]||r.base)/r.base;
     r.ing.forEach(i=>{if(i.src==="pantry"){pantry.add(i.n);return;}(depts[i.dept]=depts[i.dept]||[]).push({...i,amt:i.a?fmt(Math.round(i.a*k*100)/100):""});});});
   const order=["Freezer · Tiffin Farm","Meat","Deli","Seafood","Produce","Dairy","Bakery","Deli · Dips","Deli · Olives","Frozen","Pasta · Grains","Canned · Beans","Canned · Soup","Condiments"];
   const keys=Object.keys(depts).sort((a,b)=>order.indexOf(a)-order.indexOf(b));
   $("#sheetHero").style.display="none";
-  let h=`<h2 style="margin-top:6px">The grocery list</h2>
-    <p style="color:var(--muted);font-size:13.5px;margin:6px 0 6px;font-weight:600">Grouped for your Whole Foods order · ${Object.keys(state.week).length} meals</p>
+  let h=`<h2 style="margin-top:6px">Grocery list · ${weekShort(state.viewWeek)}</h2>
+    <p style="color:var(--muted);font-size:13.5px;margin:6px 0 6px;font-weight:600">${weekRange(state.viewWeek)} · ${Object.keys(w).length} meals · grouped for your Whole Foods order</p>
     <div class="glnote"><b>Tap “Add”</b> to open each item in Whole Foods on Amazon, pre-searched. Amazon can’t load a whole list into your cart at once, so it’s one tap per item — the fastest path that actually works.</div>
     <div class="glist">`;
   keys.forEach(d=>{h+=`<div class="dept">${d}</div>`;depts[d].forEach((it,i)=>{const id=`g-${d}-${i}`.replace(/[^a-z0-9-]/gi,'');
@@ -792,12 +827,12 @@ const BASE_R=R.length;
 function applyCustom(){R.length=BASE_R;for(const c of (state.custom||[]))R.push(c);}
 const CID=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():("c"+Date.now()+"."+Math.floor(Math.random()*1e6));
 let pushT=null,lastTs=0,polling=null;
-function snapshot(){return {week:state.week,beef:state.beef,servings:state.servings,pantryOut:state.pantryOut,favs:state.favs,custom:state.custom,_cid:CID,_ts:Date.now()};}
+function snapshot(){Object.keys(state.weeks).forEach(k=>{if(!Object.keys(state.weeks[k]||{}).length)delete state.weeks[k];});return {weeks:state.weeks,beef:state.beef,servings:state.servings,pantryOut:state.pantryOut,favs:state.favs,custom:state.custom,_cid:CID,_ts:Date.now()};}
 function queuePush(){if(window.__noSync)return;clearTimeout(pushT);pushT=setTimeout(pushCloud,600);}
 async function pushCloud(){try{const snap=snapshot();lastTs=snap._ts;await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(snap)});}catch(e){}}
 function applyRemote(d){
   if(!d)return;
-  state.week=d.week||{};state.servings=d.servings||{};state.pantryOut=d.pantryOut||{};state.favs=d.favs||{};state.custom=d.custom||[];
+  state.weeks=d.weeks||(d.week?{[curWeekKey()]:d.week}:{});state.servings=d.servings||{};state.pantryOut=d.pantryOut||{};state.favs=d.favs||{};state.custom=d.custom||[];
   if(d.beef)Object.assign(state.beef,d.beef);
   applyCustom();
   try{localStorage.setItem("poobears_v1",JSON.stringify(snapshot()))}catch(e){}
