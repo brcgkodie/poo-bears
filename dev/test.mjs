@@ -6,7 +6,7 @@ const log = [];
 async function run(label, viewport) {
   const errs = [];
   const page = await browser.newPage({ viewport });
-  await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed||0)+1; }; });
+  await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed||0)+1; }; window.__noSync = true; });
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
   page.on('console', m => { if (m.type() === 'error' && !m.text().includes('ERR_FILE_NOT_FOUND')) errs.push('CONSOLE: ' + m.text()); });
   await page.goto('file:///Users/kodiecritzer/projects/poo-bears/index.html');

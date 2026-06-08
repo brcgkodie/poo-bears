@@ -22,15 +22,15 @@
 <meta property="og:site_name" content="The Poo Bears" />
 <meta property="og:title" content="The Poo Bears · Family Kitchen" />
 <meta property="og:description" content="Meals so good they'll make you shit your pants. 40 recipes, 15 homemade sauces, a pantry tracker, and the weekly Whole Foods list." />
-<meta property="og:url" content="https://brcgkodie.github.io/poo-bears/" />
-<meta property="og:image" content="https://brcgkodie.github.io/poo-bears/og-image.jpg" />
+<meta property="og:url" content="https://poo-bears.vercel.app/" />
+<meta property="og:image" content="https://poo-bears.vercel.app/og-image.jpg" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="The Poo Bears family kitchen" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="The Poo Bears · Family Kitchen" />
 <meta name="twitter:description" content="Meals so good they'll make you shit your pants. 40 recipes, 15 sauces, a pantry tracker, and the weekly Whole Foods list." />
-<meta name="twitter:image" content="https://brcgkodie.github.io/poo-bears/og-image.jpg" />
+<meta name="twitter:image" content="https://poo-bears.vercel.app/og-image.jpg" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -211,6 +211,11 @@
   .nutri .n b{display:block;font-size:15px;font-weight:800}.nutri .n span{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase}
   .acts{display:flex;gap:10px;margin-top:18px}
   .acts .btn{margin-top:0}
+  .bform label{display:block;font-size:11.5px;font-weight:700;color:var(--ink2);margin:13px 0 0;text-transform:uppercase;letter-spacing:.04em}
+  .bform input,.bform textarea{width:100%;margin-top:6px;padding:12px 13px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;font-family:inherit;font-weight:500;background:var(--surface);color:var(--ink);outline:none;-webkit-appearance:none}
+  .bform input:focus,.bform textarea:focus{border-color:var(--green)}
+  .bform textarea{resize:vertical;line-height:1.45}
+  .brow{display:flex;gap:10px}.brow label{flex:1}
 
   /* ---------- GROCERY ---------- */
   .glnote{background:var(--surface);border-radius:14px;padding:12px 15px;font-size:12.5px;color:var(--ink2);line-height:1.5;margin:8px 0 4px;box-shadow:var(--sh-sm);font-weight:500}
@@ -369,7 +374,7 @@
 
       <!-- ===== RECIPES ===== -->
       <section class="view" id="view-recipes">
-        <div class="sec"><h2>Recipes</h2><span class="hint" id="rcount"></span></div>
+        <div class="sec"><h2>Recipes</h2><div style="display:flex;align-items:center;gap:12px"><span class="hint" id="rcount"></span><button id="newRecipeBtn" style="background:var(--green);color:#fff;border:none;border-radius:999px;padding:8px 15px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">+ New</button></div></div>
         <div class="filters" id="filters"></div>
         <div class="rgrid" id="recipeGrid"></div>
       </section>
@@ -420,6 +425,7 @@
   <div class="tab" data-tab="kitchen"><svg viewBox="0 0 24 24"><path d="M4 11h16M6 11V8a6 6 0 0 1 12 0v3M9 11v10M15 11v10M7 21h10"/></svg><span>Kitchen</span></div>
 </div></nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
 <script>
 /* ---------------- LOGO ---------------- */
 const HEART=`<svg viewBox="0 0 24 24"><path d="M12 20.3s-7.4-4.5-9.8-9C.9 8.5 2.3 4.9 5.8 4.9c2 0 3.3 1.2 4.2 2.5.9-1.3 2.2-2.5 4.2-2.5 3.5 0 4.9 3.6 3.6 6.4-2.4 4.5-9.8 9-9.8 9Z"/></svg>`;
@@ -522,10 +528,10 @@ const S=[
 ];
 
 /* ---------------- STATE ---------------- */
-const state={week:{},beef:{},filter:"All",servings:{},pantryOut:{},favs:{}};
+const state={week:{},beef:{},filter:"All",servings:{},pantryOut:{},favs:{},custom:[]};
 BEEF.forEach(c=>state.beef[c.k]=c.q);
-function save(){try{localStorage.setItem("poobears_v1",JSON.stringify({week:state.week,beef:state.beef,servings:state.servings,pantryOut:state.pantryOut,favs:state.favs}))}catch(e){}}
-function load(){try{const d=JSON.parse(localStorage.getItem("poobears_v1")||"{}");if(d.week)state.week=d.week;if(d.servings)state.servings=d.servings;if(d.pantryOut)state.pantryOut=d.pantryOut;if(d.favs)state.favs=d.favs;if(d.beef)Object.assign(state.beef,d.beef);}catch(e){}}
+function save(){try{localStorage.setItem("poobears_v1",JSON.stringify(snapshot()))}catch(e){} if(typeof queuePush==="function")queuePush();}
+function load(){try{const d=JSON.parse(localStorage.getItem("poobears_v1")||"{}");if(d.week)state.week=d.week;if(d.servings)state.servings=d.servings;if(d.pantryOut)state.pantryOut=d.pantryOut;if(d.favs)state.favs=d.favs;if(d.custom)state.custom=d.custom;if(d.beef)Object.assign(state.beef,d.beef);}catch(e){}}
 function toggleFav(id){if(state.favs[id])delete state.favs[id];else state.favs[id]=1;save();renderRecipes();}
 load();
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
@@ -536,15 +542,15 @@ function copyText(t,btn){
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done).catch(fb);}else fb();
 }
 function fmt(n){if(Number.isInteger(n))return n;const r=Math.round(n*100)/100,w=Math.floor(r),f=Math.round((r-w)*100)/100;const m={0.25:"¼",0.33:"⅓",0.5:"½",0.66:"⅔",0.67:"⅔",0.75:"¾"};return m[f]?(w?w+m[f]:m[f]):r;}
-function setImg(el,r){el.style.backgroundImage=r.grad;const im=new Image();im.onload=()=>el.style.backgroundImage=`url('${r.img}')`;im.src=r.img;}
+function setImg(el,r){el.style.backgroundImage=r.grad;if(!r.img)return;const im=new Image();im.onload=()=>el.style.backgroundImage=`url('${r.img}')`;im.src=r.img;}
 
 /* ---------------- FILTERS + RECIPES ---------------- */
-const CATS=["All","♥ Favs","Asian","Beef","Chicken","Seafood","Quick","Instant Pot","Air Fryer","Crockpot"];
+const CATS=["All","♥ Favs","Mine","Asian","Beef","Chicken","Seafood","Quick","Instant Pot","Air Fryer","Crockpot"];
 function renderFilters(){
   $("#filters").innerHTML=CATS.map(c=>`<button class="chip ${c===state.filter?'on':''}" data-f="${c}">${c}</button>`).join("");
   $$("#filters .chip").forEach(ch=>ch.onclick=()=>{state.filter=ch.dataset.f;renderFilters();renderRecipes();});
 }
-const match=r=>state.filter==="All"||(state.filter==="♥ Favs"?!!state.favs[r.id]:((r.filt||[]).includes(state.filter)||r.app===state.filter));
+const match=r=>state.filter==="All"||(state.filter==="♥ Favs"?!!state.favs[r.id]:state.filter==="Mine"?!!r.custom:((r.filt||[]).includes(state.filter)||r.app===state.filter));
 function card(r){return `<div class="rc" data-id="${r.id}"><div class="ph"><div class="fav ${state.favs[r.id]?'on':''}" data-fav="${r.id}" aria-label="Favorite">${HEART}</div></div>
   <div class="bd"><h3>${r.title}</h3><div class="meta">${r.cook.includes('hr')?r.cook:(parseInt(r.prep)+parseInt(r.cook))+' min'} · serves ${r.base}</div>
   <div class="pills"><span class="pill g">${r.pro}g protein</span><span class="pill">${r.app}</span></div></div></div>`;}
@@ -590,16 +596,18 @@ function openR(id){
     <ul class="tips">${r.tips.map(t=>`<li>${t}</li>`).join("")}</ul>
     <div class="kids"><div class="ic">🧸</div><div><b>For Kaiden &amp; Asher.</b> ${r.kids}</div></div>
     <div class="note"><b>Good to know.</b> ${r.note}</div>
-    <div class="subt">Nutrition · per serving</div>
-    <div class="nutri"><div class="n"><b>${r.kcal}</b><span>kcal</span></div><div class="n"><b>${r.pro}g</b><span>protein</span></div><div class="n"><b>${r.carb}g</b><span>carbs</span></div><div class="n"><b>${r.fat}g</b><span>fat</span></div></div>
+    ${r.kcal>0?`<div class="subt">Nutrition · per serving</div>
+    <div class="nutri"><div class="n"><b>${r.kcal}</b><span>kcal</span></div><div class="n"><b>${r.pro}g</b><span>protein</span></div><div class="n"><b>${r.carb}g</b><span>carbs</span></div><div class="n"><b>${r.fat}g</b><span>fat</span></div></div>`:""}
     <div class="acts">
       <button class="btn ${state.week[id]?'dark':''}" id="addWeek" style="flex:1.4">${state.week[id]?'✓ In this week':'Add to the week'}</button>
       <button class="btn ghost" id="printR" style="flex:1"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg>Save PDF</button>
-    </div>`;
+    </div>
+    ${r.custom?`<div class="acts"><button class="btn ghost" id="editR" style="flex:1">Edit recipe</button><button class="btn ghost" id="delR" style="flex:1;color:var(--berry)">Delete</button></div>`:""}`;
   $$("#sheetInner .scaler button").forEach(b=>b.onclick=()=>{const cur=state.servings[id]||r.base;state.servings[id]=Math.max(2,cur+(+b.dataset.d)*2);save();openR(id);});
   $("#addWeek").onclick=()=>{state.week[id]?delete state.week[id]:state.week[id]=true;save();renderWeek();closeS();};
   $("#printR").onclick=()=>printR(id);
   const psEl=$("#sheetInner .pairsauce");if(psEl)psEl.onclick=()=>openSauce(psEl.dataset.sauce);
+  if(r.custom){const er=$("#editR"),dr=$("#delR");if(er)er.onclick=()=>openBuilder(r);if(dr)dr.onclick=()=>{if(confirm("Delete this recipe?"))deleteCustom(id);};}
   const fx=$("#sheetFav");fx.style.display="flex";fx.innerHTML=HEART;fx.classList.toggle("on",!!state.favs[id]);fx.onclick=()=>{toggleFav(id);fx.classList.toggle("on",!!state.favs[id]);};
   $("#sheetHero").style.display="";openS();
 }
@@ -736,9 +744,82 @@ function renderPantry(){
 function switchTab(tab){$$("[data-tab]").forEach(x=>x.classList.toggle("on",x.dataset.tab===tab));$$(".view").forEach(x=>x.classList.remove("on"));$("#view-"+tab).classList.add("on");window.scrollTo(0,0);}
 $$("[data-tab]").forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
 
+/* ---------------- RECIPE BUILDER ---------------- */
+function openBuilder(edit){
+  const e=edit||{};
+  $("#sheetHero").style.display="none";
+  const ingText=(e.ing||[]).map(i=>((i.a?fmt(i.a)+" ":"")+(i.u?i.u+" ":"")+i.n).trim()).join("\n");
+  $("#sheetInner").innerHTML=`
+    <h2 style="margin-top:10px">${edit?"Edit recipe":"New recipe"}</h2>
+    <p style="color:var(--muted);font-size:13px;margin:5px 0 14px;font-weight:600">Saved to your shared kitchen — Lauren sees it on her phone too.</p>
+    <div class="bform">
+      <label>Title<input id="b_title" value="${(e.title||"").replace(/"/g,"&quot;")}" placeholder="Dad's famous chili"></label>
+      <label>Category<input id="b_cat" value="${(e.cuisine||"").replace(/"/g,"&quot;")}" placeholder="Dinner · Asian · etc."></label>
+      <div class="brow"><label>Serves<input id="b_serv" type="number" inputmode="numeric" value="${e.base||4}"></label><label>Prep min<input id="b_prep" type="number" inputmode="numeric" value="${e.prep?parseInt(e.prep)||0:0}"></label><label>Cook min<input id="b_cook" type="number" inputmode="numeric" value="${e.cook?parseInt(e.cook)||0:0}"></label></div>
+      <div class="brow"><label>Protein g<input id="b_pro" type="number" inputmode="numeric" value="${e.pro||0}"></label><label>Calories<input id="b_kcal" type="number" inputmode="numeric" value="${e.kcal||0}"></label></div>
+      <label>Ingredients — one per line<textarea id="b_ing" rows="6" placeholder="1 lb ground beef&#10;1 onion, diced&#10;2 cloves garlic">${ingText}</textarea></label>
+      <label>Steps — one per line<textarea id="b_steps" rows="6" placeholder="Brown the beef.&#10;Add the onion and garlic...">${(e.steps||[]).join("\n")}</textarea></label>
+      <label>Notes (optional)<textarea id="b_note" rows="2">${e.note||""}</textarea></label>
+    </div>
+    <div class="acts">
+      <button class="btn" id="b_save" style="flex:1.5">${edit?"Save changes":"Save recipe"}</button>
+      <button class="btn ghost" id="b_cancel" style="flex:1">Cancel</button>
+    </div>`;
+  $("#b_cancel").onclick=closeS;
+  $("#b_save").onclick=()=>{
+    const title=$("#b_title").value.trim(); if(!title){$("#b_title").focus();return;}
+    const ingLines=$("#b_ing").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    const stepLines=$("#b_steps").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    const prep=+$("#b_prep").value||0,cook=+$("#b_cook").value||0;
+    const rec={id:edit?e.id:("custom-"+Date.now()),custom:true,img:"",grad:"linear-gradient(150deg,#19b873,#0a5c3a)",
+      title,cuisine:($("#b_cat").value.trim()||"Mine"),app:"Custom",equip:"",prep:prep+" min",cook:cook+" min",
+      base:+$("#b_serv").value||4,kcal:+$("#b_kcal").value||0,pro:+$("#b_pro").value||0,carb:0,fat:0,
+      filt:[],tags:[{t:"My recipe",c:"g"}],side:"Whatever you’re feeling",pairSauce:null,
+      ing:ingLines.map(l=>({n:l,a:null,u:"",src:"wf",dept:"Custom",wf:null,q:l})),
+      steps:stepLines.length?stepLines:["Cook it up."],kids:"Plate up a milder portion for the boys.",tips:[],note:$("#b_note").value.trim()};
+    state.custom=state.custom||[];
+    if(edit){const i=state.custom.findIndex(c=>c.id===e.id);if(i>=0)state.custom[i]=rec;else state.custom.push(rec);}
+    else state.custom.push(rec);
+    applyCustom();save();renderRecipes();closeS();
+    setTimeout(()=>openR(rec.id),320);
+  };
+  openS();
+}
+function deleteCustom(id){state.custom=(state.custom||[]).filter(c=>c.id!==id);applyCustom();save();closeS();renderRecipes();}
+
+/* ---------------- CLOUD SYNC (Supabase) ---------------- */
+const BASE_R=R.length;
+function applyCustom(){R.length=BASE_R;for(const c of (state.custom||[]))R.push(c);}
+const CID=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():("c"+Date.now()+"."+Math.floor(Math.random()*1e6));
+function snapshot(){return {week:state.week,beef:state.beef,servings:state.servings,pantryOut:state.pantryOut,favs:state.favs,custom:state.custom,_cid:CID};}
+let sb=null,pushT=null;
+function queuePush(){if(!sb)return;clearTimeout(pushT);pushT=setTimeout(pushCloud,500);}
+async function pushCloud(){if(!sb)return;try{await sb.from("household").upsert({id:"poobears",data:snapshot(),updated_at:new Date().toISOString()});}catch(e){}}
+function applyRemote(d){
+  if(!d)return;
+  state.week=d.week||{};state.servings=d.servings||{};state.pantryOut=d.pantryOut||{};state.favs=d.favs||{};state.custom=d.custom||[];
+  if(d.beef)Object.assign(state.beef,d.beef);
+  applyCustom();
+  try{localStorage.setItem("poobears_v1",JSON.stringify(snapshot()))}catch(e){}
+  renderRecipes();renderSauces();renderWeek();renderBeef();renderPantry();
+}
+async function initSync(){
+  if(window.__noSync||typeof supabase==="undefined")return;
+  try{
+    sb=supabase.createClient("https://dmybgybdacccbhxwsnzp.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRteWJneWJkYWNjY2JoeHdzbnpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MjE5NTIsImV4cCI6MjA5NjQ5Nzk1Mn0.eROLJI3RxQiGFqa8i_fQwt3XtoVtwj6n3sgoYXQ2E1E");
+    const {data}=await sb.from("household").select("data").eq("id","poobears").maybeSingle();
+    if(data&&data.data&&Object.keys(data.data).length&&data.data._cid!==CID){applyRemote(data.data);}
+    else{pushCloud();}
+    sb.channel("hh").on("postgres_changes",{event:"*",schema:"public",table:"household",filter:"id=eq.poobears"},p=>{const d=p.new&&p.new.data;if(d&&d._cid!==CID)applyRemote(d);}).subscribe();
+  }catch(e){}
+}
+
 /* ---------------- INIT ---------------- */
 $("#sideLogo").innerHTML=logoHTML();$("#topLogo").innerHTML=logoHTML();
+applyCustom();
 renderFilters();renderRecipes();renderSauces();renderWeek();renderBeef();renderKitchen();renderPantry();
+$("#newRecipeBtn").onclick=()=>openBuilder();
+initSync();
 
 /* ---------------- PASSWORD GATE ---------------- */
 (function(){
