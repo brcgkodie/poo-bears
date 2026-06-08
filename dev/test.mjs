@@ -10,7 +10,7 @@ async function run(label, viewport) {
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
   page.on('console', m => { if (m.type() === 'error' && !m.text().includes('ERR_FILE_NOT_FOUND')) errs.push('CONSOLE: ' + m.text()); });
   await page.goto('file:///Users/kodiecritzer/projects/poo-bears/index.html');
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('pb_ok','1'); });
   await page.reload();
   await page.waitForTimeout(400);
 
