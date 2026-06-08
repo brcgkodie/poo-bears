@@ -132,14 +132,17 @@
   .chip{flex:0 0 auto;border:none;background:var(--surface);color:var(--ink2);box-shadow:var(--sh-sm);
     border-radius:999px;padding:9px 16px;font-size:13.5px;cursor:pointer;font-weight:700;transition:.15s}
   .chip.on{background:var(--ink);color:#fff}
+  #recipeGrid .empty{grid-column:1/-1}
 
   /* ---------- RECIPE CARDS ---------- */
   .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:14px}
   .rc{background:var(--surface);border-radius:20px;box-shadow:var(--sh);overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
   .rc:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(20,22,24,.12)}
   .rc .ph{aspect-ratio:5/4;background-size:cover;background-position:center;position:relative}
-  .rc .fav{position:absolute;top:9px;right:9px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-sm)}
-  .rc .fav svg{width:15px;height:15px}
+  .rc .fav,.feature .fav{position:absolute;top:9px;right:9px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-sm);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s}
+  .rc .fav:active,.feature .fav:active{transform:scale(.82)}
+  .rc .fav svg,.feature .fav svg{width:16px;height:16px;fill:none;stroke:#c4c8cd;stroke-width:2}
+  .rc .fav.on svg,.feature .fav.on svg,.favX.on svg{fill:#ff4d6d;stroke:#ff4d6d}
   .rc .bd{padding:13px 14px 15px}
   .rc h3{font-size:15.5px;font-weight:700;line-height:1.25;letter-spacing:-.01em}
   .rc .meta{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:6px}
@@ -167,6 +170,9 @@
   .grab{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:40px;height:4px;background:rgba(255,255,255,.85);border-radius:99px;z-index:2}
   .closeX{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;z-index:2;cursor:pointer;box-shadow:var(--sh-sm)}
   .closeX svg{width:18px;height:18px;stroke:#15171a;stroke-width:2.2}
+  .favX{position:absolute;top:14px;right:58px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;z-index:2;cursor:pointer;box-shadow:var(--sh-sm);-webkit-tap-highlight-color:transparent;transition:transform .12s}
+  .favX:active{transform:scale(.85)}
+  .favX svg{width:19px;height:19px;fill:none;stroke:#15171a;stroke-width:2}
   .inner{max-width:620px;margin:0 auto;padding:18px 20px 44px;background:var(--bg);border-radius:24px 24px 0 0;position:relative;margin-top:-26px}
   .inner h2{font-size:25px;font-weight:800;line-height:1.12}
   .chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 0}
@@ -399,6 +405,7 @@
   <div class="shero" id="sheetHero">
     <div class="grab"></div>
     <div class="closeX" id="closeX"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+    <div class="favX" id="sheetFav" aria-label="Favorite"></div>
     <div class="img" id="sheetImg"></div>
   </div>
   <div class="inner" id="sheetInner"></div>
@@ -415,6 +422,7 @@
 
 <script>
 /* ---------------- LOGO ---------------- */
+const HEART=`<svg viewBox="0 0 24 24"><path d="M12 20.3s-7.4-4.5-9.8-9C.9 8.5 2.3 4.9 5.8 4.9c2 0 3.3 1.2 4.2 2.5.9-1.3 2.2-2.5 4.2-2.5 3.5 0 4.9 3.6 3.6 6.4-2.4 4.5-9.8 9-9.8 9Z"/></svg>`;
 const BEAR=`<svg viewBox="0 0 24 24" fill="none"><circle cx="6.6" cy="6.8" r="2.7" fill="#fff"/><circle cx="17.4" cy="6.8" r="2.7" fill="#fff"/><circle cx="6.6" cy="6.8" r="1.2" fill="#0c7d4e"/><circle cx="17.4" cy="6.8" r="1.2" fill="#0c7d4e"/><path d="M12 4.8c4.5 0 7.2 3 7.2 7.1S16.2 19.4 12 19.4 4.8 16 4.8 11.9 7.5 4.8 12 4.8Z" fill="#fff"/><ellipse cx="12" cy="13.7" rx="4" ry="3.1" fill="#e9f9f1"/><circle cx="9.4" cy="10.7" r="1.15" fill="#0a5c3a"/><circle cx="14.6" cy="10.7" r="1.15" fill="#0a5c3a"/><circle cx="9.05" cy="10.35" r=".4" fill="#fff"/><circle cx="14.25" cy="10.35" r=".4" fill="#fff"/><ellipse cx="12" cy="12.8" rx="1.45" ry="1.05" fill="#0a5c3a"/><path d="M9.9 13.7c.5 1.1 1.3 1.7 2.1 1.7s1.6-.6 2.1-1.7" stroke="#0a5c3a" stroke-width="1.1" stroke-linecap="round" fill="none"/><rect x="11.05" y="14.7" width="1.9" height="2" rx=".95" fill="#ff8f9a"/></svg>`;
 const logoHTML=()=>`<div class="mark">${BEAR}</div><div><div class="nm">The Poo Bears</div><div class="sub">family kitchen</div></div>`;
 const QUIPS=[
@@ -514,10 +522,11 @@ const S=[
 ];
 
 /* ---------------- STATE ---------------- */
-const state={week:{},beef:{},filter:"All",servings:{},pantryOut:{}};
+const state={week:{},beef:{},filter:"All",servings:{},pantryOut:{},favs:{}};
 BEEF.forEach(c=>state.beef[c.k]=c.q);
-function save(){try{localStorage.setItem("poobears_v1",JSON.stringify({week:state.week,beef:state.beef,servings:state.servings,pantryOut:state.pantryOut}))}catch(e){}}
-function load(){try{const d=JSON.parse(localStorage.getItem("poobears_v1")||"{}");if(d.week)state.week=d.week;if(d.servings)state.servings=d.servings;if(d.pantryOut)state.pantryOut=d.pantryOut;if(d.beef)Object.assign(state.beef,d.beef);}catch(e){}}
+function save(){try{localStorage.setItem("poobears_v1",JSON.stringify({week:state.week,beef:state.beef,servings:state.servings,pantryOut:state.pantryOut,favs:state.favs}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem("poobears_v1")||"{}");if(d.week)state.week=d.week;if(d.servings)state.servings=d.servings;if(d.pantryOut)state.pantryOut=d.pantryOut;if(d.favs)state.favs=d.favs;if(d.beef)Object.assign(state.beef,d.beef);}catch(e){}}
+function toggleFav(id){if(state.favs[id])delete state.favs[id];else state.favs[id]=1;save();renderRecipes();}
 load();
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 const WF=q=>`https://www.amazon.com/s?k=${encodeURIComponent(q)}&i=wholefoods`;
@@ -530,13 +539,13 @@ function fmt(n){if(Number.isInteger(n))return n;const r=Math.round(n*100)/100,w=
 function setImg(el,r){el.style.backgroundImage=r.grad;const im=new Image();im.onload=()=>el.style.backgroundImage=`url('${r.img}')`;im.src=r.img;}
 
 /* ---------------- FILTERS + RECIPES ---------------- */
-const CATS=["All","Asian","Beef","Chicken","Seafood","Quick","Instant Pot","Air Fryer","Crockpot"];
+const CATS=["All","♥ Favs","Asian","Beef","Chicken","Seafood","Quick","Instant Pot","Air Fryer","Crockpot"];
 function renderFilters(){
   $("#filters").innerHTML=CATS.map(c=>`<button class="chip ${c===state.filter?'on':''}" data-f="${c}">${c}</button>`).join("");
   $$("#filters .chip").forEach(ch=>ch.onclick=()=>{state.filter=ch.dataset.f;renderFilters();renderRecipes();});
 }
-const match=r=>state.filter==="All"||(r.filt||[]).includes(state.filter)||r.app===state.filter;
-function card(r){return `<div class="rc" data-id="${r.id}"><div class="ph"><div class="fav">${BEAR.replace('viewBox','style="width:15px;height:15px" viewBox')}</div></div>
+const match=r=>state.filter==="All"||(state.filter==="♥ Favs"?!!state.favs[r.id]:((r.filt||[]).includes(state.filter)||r.app===state.filter));
+function card(r){return `<div class="rc" data-id="${r.id}"><div class="ph"><div class="fav ${state.favs[r.id]?'on':''}" data-fav="${r.id}" aria-label="Favorite">${HEART}</div></div>
   <div class="bd"><h3>${r.title}</h3><div class="meta">${r.cook.includes('hr')?r.cook:(parseInt(r.prep)+parseInt(r.cook))+' min'} · serves ${r.base}</div>
   <div class="pills"><span class="pill g">${r.pro}g protein</span><span class="pill">${r.app}</span></div></div></div>`;}
 function renderRecipes(){
@@ -544,13 +553,15 @@ function renderRecipes(){
   $("#rcount").textContent=list.length+(list.length===1?" recipe":" recipes");
   let html="";
   if(list.length){const f=list[0];
-    html+=`<div class="feature" data-id="${f.id}"><div class="ph"><div class="tagtop">${f.cuisine}</div></div>
+    html+=`<div class="feature" data-id="${f.id}"><div class="ph"><div class="tagtop">${f.cuisine}</div><div class="fav ${state.favs[f.id]?'on':''}" data-fav="${f.id}" aria-label="Favorite">${HEART}</div></div>
       <div class="bd"><h3>${f.title}</h3><div class="meta">${f.prep} prep · ${f.cook} cook · serves ${f.base} · ${f.pro}g protein</div>
       <div class="pills" style="margin-top:12px"><span class="pill g">${f.kcal} kcal</span><span class="pill">${f.app}</span><span class="pill w">${f.cuisine}</span></div></div></div>`;}
   html+=list.slice(1).map(card).join("");
+  if(!list.length)html=`<div class="empty">${state.filter==="♥ Favs"?"No favorites yet — tap the ♥ on any recipe to save it here.":"No recipes match this filter."}</div>`;
   $("#recipeGrid").innerHTML=html;
   const feat=$("#recipeGrid .feature");if(feat){setImg(feat.querySelector(".ph"),list[0]);feat.onclick=()=>openR(list[0].id);}
   $$("#recipeGrid .rc").forEach(el=>{const r=R.find(x=>x.id===el.dataset.id);setImg(el.querySelector(".ph"),r);el.onclick=()=>openR(r.id);});
+  $$("#recipeGrid .fav").forEach(el=>el.onclick=e=>{e.stopPropagation();toggleFav(el.dataset.fav);});
 }
 
 /* ---------------- SHEET ---------------- */
@@ -589,6 +600,7 @@ function openR(id){
   $("#addWeek").onclick=()=>{state.week[id]?delete state.week[id]:state.week[id]=true;save();renderWeek();closeS();};
   $("#printR").onclick=()=>printR(id);
   const psEl=$("#sheetInner .pairsauce");if(psEl)psEl.onclick=()=>openSauce(psEl.dataset.sauce);
+  const fx=$("#sheetFav");fx.style.display="flex";fx.innerHTML=HEART;fx.classList.toggle("on",!!state.favs[id]);fx.onclick=()=>{toggleFav(id);fx.classList.toggle("on",!!state.favs[id]);};
   $("#sheetHero").style.display="";openS();
 }
 function openS(){$("#scrim").classList.add("on");$("#sheet").classList.add("on");document.body.style.overflow="hidden";$("#sheet").scrollTop=0;}
@@ -678,7 +690,7 @@ function renderSauces(){
 }
 function openSauce(id){
   const s=S.find(x=>x.id===id);
-  $("#sheetHero").style.display="";setImg($("#sheetImg"),s);
+  $("#sheetHero").style.display="";$("#sheetFav").style.display="none";setImg($("#sheetImg"),s);
   $("#sheetInner").innerHTML=`
     <h2>${s.title}</h2>
     <div class="chips">${s.tags.map(t=>`<span class="pill ${t.c}">${t.t}</span>`).join("")}</div>
